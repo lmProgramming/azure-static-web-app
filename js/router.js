@@ -116,18 +116,44 @@ function RenderAboutPage() {
 function RenderContactPage() {
     document.querySelector('main').innerHTML = `
     <h1 class="title">Contact with me</h1>
-    <form id="contact-form">
-    <label for="name">Name:</label>
-    <input type="text" id="name" name="name" required>
-    <label for="email">Email:</label>
-    <input type="email" id="email" name="email" required>
-    <label for="message">Message:</label>
-    <textarea id="message" name="message" required></textarea>
-    <button type="submit">Send</button>
-    </form>`;
-    document.getElementById('contact-form').addEventListener('submit', (event) => {
-        event.preventDefault();
-        alert('Form submitted!');
+      <form
+        id="contact-form"
+        method="POST"
+      >
+        <div class="alert alert-success" style="display: none">
+          {% editable_text 'contact-form-success' %}
+          <p>
+            <strong>Success!</strong> Your request has been sent! We will get
+            back to you as soon as possible.
+          </p>
+          {% endeditable_text %}
+        </div>
+
+        <div class="alert alert-danger" style="display: none">
+          {% editable_text 'contact-form-error' %}
+          <p>
+            <strong>Failed!</strong> Your form has not been sent, please make
+            sure all required fields are filled in.
+          </p>
+          {% endeditable_text %}
+        </div>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required />
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required />
+        <label for="message">Message:</label>
+        <textarea id="message" name="message" required></textarea>
+        <div class="form-item">
+		    <div id="recaptcha"></div>
+	    </div>
+        <button type="submit">Send</button>
+      </form>
+    `;
+
+    console.log('Contact form loaded!');
+
+    grecaptcha.render('recaptcha', {
+        'sitekey': '6LdcQg0rAAAAAEciRtr35TJA-q2CRoVBopEIDthL'
     });
 }
 function popStateHandler() {
@@ -140,3 +166,40 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
     document.body.classList.toggle('dark-mode');
 })
 window.onpopstate = popStateHandler;
+
+$(function () {
+    $('#contact-form').on('submit', function (e) {
+        e.preventDefault();
+        var form = $(this);
+
+        form.find('.alert-danger').hide();
+
+        console.log('Form submitted!');
+
+        var payload = form.serialize();
+
+        function showError() {
+            form.find('.alert-danger').fadeIn();
+        }
+
+        if (grecaptcha.getResponse() == "") {
+            showError();
+            return false;
+        }
+
+        var xhr = $.ajax({
+            type: 'POST',
+            url: form.attr('action'),
+            data: payload,
+            dataType: 'json'
+        });
+
+        xhr.done(function (d) {
+            form.find('.alert-success').fadeIn();
+        });
+
+        xhr.fail(function (d) {
+            showError();
+        });
+    });
+});
